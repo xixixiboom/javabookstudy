@@ -1,0 +1,120 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+
+<mapper namespace="com.mybatis.mapper.UserMapper">
+    <!--    <select id="selectAll" resultType="com.mybatis.pojo.User">-->
+    <!--    <select id ="selectAll" resultType = "User">
+            select * from tb_user;
+        </select>-->
+
+    <!--    当返回字段名和实体类中不同时，在sql中使用as 别名，使得别名=实体类中的字段名，即可关联上-->
+    <!--    //当需要复用时，采用sql片段的方式，不够灵活-->
+    <!--    <sql id="searchResult">
+            username, password, gender, addr
+        </sql>
+        <select id ="selectAll" resultType = "User">
+            select
+                <include refid="searchResult"/>
+            from tb_user;
+        </select>-->
+
+    <!--    最常用的方式，resultMap  result表示将不一样的字段进行映射，和起别名一样    id是主键字段的映射，result是一般字段的映射-->
+    <resultMap id="searchResult" type="User">
+        <result column="username" property="username"></result>
+    </resultMap>
+
+    <select id="selectAll" resultMap="searchResult">
+        select
+        *
+        from tb_user
+    </select>
+
+    <!--占位符有两种  #{}   ${}   #会替换为?防止sql注入，  $拼sql，会存在sql注入问题}-->
+    <!-- 特殊字符处理，1.转义   2.CDATA区      <![CDATA[要写的符号]]>     -->
+    <select id="selectById" resultType="User">
+        select * from tb_user where id  <![CDATA[<]]> #{id}
+    </select>
+
+    <!--  按多条件查询     参数传递的三种方式，1.@Param   标注参数占位符名   2. 传入对应的对象，自动从对象中取相应的属性     3. 传入Map  -->
+    <!--    <select id ="selectByMultipleID" resultType="User">
+            select * from tb_user where username like #{username} and  addr like #{addr};
+        </select>-->
+
+    <!-- 基于多条件查询优化，动态条件查询  -->
+    <select id="selectByMultipleID" resultType="User">
+        select *
+        from tb_user
+        <where>
+            <if test=" username != null and username != ''">
+                and username like #{username}
+            </if>
+            <if test=" addr != null and addr!=''">
+                and addr like #{addr}
+            </if>
+        </where>
+
+    </select>
+
+    <!-- 也可以不加otherwise  替换为<where>标签包裹,这个可以用来做下拉框，固定选给定的值，相当于switch case when-->
+    <select id="selectByMultipleIDSingle" resultType="User">
+        select *
+        from tb_user
+        where
+        <choose>
+            <when test="username != null and username != ''">
+                username like #{username}
+            </when>
+            <otherwise>
+                1=1
+            </otherwise>
+        </choose>
+    </select>
+
+
+    <!-- 添加这两个参数后可以返回添加数据的主键-->
+    <insert id="add" useGeneratedKeys="true" keyProperty="id">
+        insert into tb_user (id,username,password,gender,addr) values (#{id},#{username},#{password},#{gender},#{addr})
+    </insert>
+
+    <update id="update">
+        update tb_user
+        <set>
+            <if test="username!=null  and username!=''">
+                username = #{username},
+            </if>
+            <if test="password!=null  and password!=''">
+                password = #{password},
+            </if>
+            <if test="addr!=null  and addr!=''">
+                addr = #{addr},
+            </if>
+            <if test="gender!=null  and gender!=''">
+                gender = #{gender}
+            </if>
+        </set>
+        where
+        id = #{id}
+    </update>
+
+    <delete id="delete">
+        delete from tb_user  where id =#{id}
+    </delete>
+
+    <!-- 批量删除
+        mybatis 会将数组参数，封装为一个map集合，
+        *默认：array=数组
+        *使用@Param 注解改变map集合中的默认key的名称
+         -->
+    <delete id="deleteByIds">
+        delete from tb_user where id
+        in
+        <foreach collection="ids" item="id" separator="," open="(" close=")">
+            #{id}
+        </foreach>
+    </delete>
+
+
+</mapper>
